@@ -11,7 +11,6 @@ fastp --in1 Bunawan_Ascaris_2_S10_merged__R1_001.fastq.gz --in2 Bunawan_Ascaris_
 #performing fastqc on the trimmed samples## 
 mkdir trimmed 
 cd trimmed
-fastqc.
 multiqc.
 
 #A.Suum reference genome (germline) available at: https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013433145.1/ and saved as Asc_v2020.fna 
@@ -32,10 +31,6 @@ bowtie2 --very-sensitive -p 28 -x asc_ref_2020 -1 Bunawan_Ascaris_S10_R1_trimmed
 #creating a bam file, aligning and indexing ###
 samtools view -b -o Bunawan_Ascaris_S10.bam Bunawan_Ascaris_S10_align_v1.sam
 samtools sort -o Bunawan_Ascaris_S10_sort.bam Bunawan_Ascaris_S10.bam
-samtools index Bunawan_Ascaris_S10_sort.bam
-
-#viewing bowtie2 flags ####
-samtools flagstat Bunawan_Ascaris_S10_sort.bam
 
 #Marking duplicate reads ####
 java -Xmx16g -jar /home/vetschool/mambaforge/pkgs/picard-3.0.0-hdfd78af_1/share/picard-3.0.0-1/picard.jar MarkDuplicates \
@@ -44,5 +39,10 @@ java -Xmx16g -jar /home/vetschool/mambaforge/pkgs/picard-3.0.0-hdfd78af_1/share/
   OUTPUT=/media/sf_virtualbox_shared/lauren/ascaris_phi/S10_deduplicated.bam \
   METRICS_FILE=/media/sf_virtualbox_shared/lauren/ascaris_phi/dedup_S10_metrics.txt
 
+#viewing bowtie2 flags ####
+samtools flagstat Bunawan_Ascaris_S10_sort.bam
+
+#indexing the .bam file
+samtools index Bunawan_Ascaris_S10_sort.bam
 
  
