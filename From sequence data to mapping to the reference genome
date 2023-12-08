@@ -1,5 +1,8 @@
 conda activate myenv
 
+#extracting data from a .tar file### 
+tar -xvf X204SC23074078-Z01-F001.tar
+
 #merging the two sets of paired-end reads ####
 mkdir merged
     cat run_1/Bunawan_Ascaris_2_S10_S10/Bunawan_Ascaris_2_S10_S10_R1_001.fastq.gz run_2/Bunawan_Ascaris_2_S10_S10/Bunawan_Ascaris_2_S10_S10_R1_001.fastq.gz > merged/Bunawan_Ascaris_2_S10_merged__R1_001.fastq.gz   
@@ -13,6 +16,9 @@ mkdir trimmed
 cd trimmed
 multiqc.
 
+#checking for contamination, by extracting sequence data to compare on the NCBI database###
+gunzip -c Bunawan_Ascaris_S10_R1_trimmed.fastq.gz | head -100 > sample_S10_R1.fastq
+
 #A.Suum reference genome (germline) available at: https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013433145.1/ and saved as Asc_v2020.fna 
 
 #making an index file ####
@@ -22,27 +28,40 @@ bowtie2-build Asc_v2020.fna asc_ref_2020
 bowtie2 --very-sensitive -p 28 -x asc_ref_2020 -1 Bunawan_Ascaris_S10_R1_trimmed.fastq.gz -2 Bunawan_Ascaris_S10_R2_trimmed.fastq.gz -S Bunawan_Ascaris_S10_align_v1.sam
 
 #(very sensitive options;  -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 )
-    # -D <int>          give up extending after <int> failed extends in a row (15)
-    #-R <int>           for reads w/ repetitive seeds, try <int> sets of seeds (2)
-	  #-N <int>           max # mismatches in seed alignment; can be 0 or 1 (0)
-	  #-L <int>           length of seed substrings; must be >3, <32 (22)
-    # -i <func>         interval between seed substrings w/r/t read len (S,1,1.15)
+   # -D <int>          give up extending after <int> failed extends in a row (15)
+   #-R <int>           for reads w/ repetitive seeds, try <int> sets of seeds (2)
+   #-N <int>           max # mismatches in seed alignment; can be 0 or 1 (0)
+   #-L <int>           length of seed substrings; must be >3, <32 (22)
+   # -i <func>         interval between seed substrings w/r/t read len (S,1,1.15)
 
 #creating a bam file, aligning and indexing ###
 samtools view -b -o Bunawan_Ascaris_S10.bam Bunawan_Ascaris_S10_align_v1.sam
 samtools sort -o Bunawan_Ascaris_S10_sort.bam Bunawan_Ascaris_S10.bam
 
-#Marking duplicate reads ####
-java -Xmx16g -jar /home/vetschool/mambaforge/pkgs/picard-3.0.0-hdfd78af_1/share/picard-3.0.0-1/picard.jar MarkDuplicates \
-  ASSUME_SORTED=true \
-  INPUT=/media/sf_virtualbox_shared/lauren/ascaris_phi/Bunawan_Ascaris_S10_sort.bam \
-  OUTPUT=/media/sf_virtualbox_shared/lauren/ascaris_phi/S10_deduplicated.bam \
-  METRICS_FILE=/media/sf_virtualbox_shared/lauren/ascaris_phi/dedup_S10_metrics.txt
+#removing duplicate reads ####
+java -Xmx16g -jar /home/vetschool/mambaforge/pkgs/picard-3.0.0-hdfd78af_1/share/picard-3.0.0-1/picard.jar
+MarkDuplicates REMOVE_DUPLICATES=true
+VALIDATION_STRINGENCY=SILENT INPUT=/media/sf_virtualbox_shared/lauren/ascaris_phi/Trento_Ascaris_S7_sort.bam
+OUTPUT=/media/sf_virtualbox_shared/lauren/ascaris_phi/Trento_remd_S7_sort.bam
+METRICS_FILE=/media/sf_virtualbox_shared/lauren/ascaris_phi/Trento_remd_S7.bam.metric
+
+#resort the.bam files ####
+samtools sort -o Trento_remd_S7_resort.bam Trento_remd_S7_sort.bam
 
 #viewing bowtie2 flags ####
-samtools flagstat Bunawan_Ascaris_S10_sort.bam
+samtools flagstat Trento_remd_S7_resort.bam
 
-#indexing the .bam file
-samtools index Bunawan_Ascaris_S10_sort.bam
+#indexing the .bam file ####
+samtools index Trento_remd_S7_resort.bam
+
+#checking depth and coverage ###
+samtools depth Trento_remd_S7_resort.bam | awk '{c++;s+=$3}END{print s/c}'
+   or
+samtools depth Trento_remd_S7_resort.bam > S7_coverage.txt
+
+#reindex the reference genome and samples for downstream use ####
+samtools faidx Asc_v2020.fna
+samtools index Trento_remd_S7_resort.bam
+
 
  
