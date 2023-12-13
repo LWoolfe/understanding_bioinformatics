@@ -52,12 +52,10 @@ samtools sort -o Trento_remd_S7_resort.bam Trento_remd_S7_sort.bam
 samtools flagstat Trento_remd_S7_resort.bam
 
 #indexing the .bam file ####
-samtools index Trento_remd_S7_resort.bam
+samtools index Trento_S7_remd_resort.bam
 
-#checking depth and coverage ###
-samtools depth Trento_remd_S7_resort.bam | awk '{c++;s+=$3}END{print s/c}'
-   or
-samtools depth Trento_remd_S7_resort.bam > S7_coverage.txt
+#checking depth and coverage per chromosome ###
+samtools depth Trento_S7_remd_resort.bam | awk '{sum[$1] += $3; count[$1]++} END {for (chr in sum) print "Average Coverage for", chr, ":", sum[chr]/count[chr]}'
 
 #reindex the reference genome and samples for downstream use ####
 samtools faidx Asc_v2020.fna
