@@ -21,10 +21,10 @@ gunzip -c Bunawan_Ascaris_S10_R1_trimmed.fastq.gz | head -100 > sample_S10_R1.fa
 
 #A.Suum reference genome (germline) available at: https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_013433145.1/ and saved as Asc_v2020.fna 
 
-#making an index file ####
+#making an index file using bowtie2 build ####
 bowtie2-build Asc_v2020.fna asc_ref_2020
 
-#Aligning using bowtie2 ####
+#aligning using bowtie2 ####
 bowtie2 --very-sensitive -p 28 -x asc_ref_2020 -1 Bunawan_Ascaris_S10_R1_trimmed.fastq.gz -2 Bunawan_Ascaris_S10_R2_trimmed.fastq.gz -S Bunawan_Ascaris_S10_align_v1.sam
 
 #(very sensitive options;  -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 )
@@ -48,18 +48,21 @@ METRICS_FILE=/media/sf_virtualbox_shared/lauren/ascaris_phi/Trento_remd_S7.bam.m
 #resort the.bam files ####
 samtools sort -o Trento_remd_S7_resort.bam Trento_remd_S7_sort.bam
 
-#viewing bowtie2 flags ####
-samtools flagstat Trento_remd_S7_resort.bam
+#view only aligned data ####
+samtools view -b -F 4 Trento_remd_S7_resort.bam > Trento_S7_filtered.bam
 
-#indexing the .bam file ####
-samtools index Trento_S7_remd_resort.bam
+#viewing bowtie2 flags ####
+samtools flagstat Trento_S7_filtered.bam
 
 #checking depth and coverage per chromosome ###
-samtools depth Trento_S7_remd_resort.bam | awk '{sum[$1] += $3; count[$1]++} END {for (chr in sum) print "Average Coverage for", chr, ":", sum[chr]/count[chr]}'
+samtools depth Trento_S7_filtered.bam| awk '{sum[$1] += $3; count[$1]++} END {for (chr in sum) print "Average Coverage for", chr, ":", sum[chr]/count[chr]}'
+
+#indexing the .bam file ####
+samtools index Trento_S7_filtered.bam
 
 #reindex the reference genome and samples for downstream use ####
 samtools faidx Asc_v2020.fna
-samtools index Trento_remd_S7_resort.bam
+samtools index Trento_S7_filtered.bam
 
 
  
