@@ -1,0 +1,8 @@
+for i in $(ls EOG092D*treefile | sed 's/.treefile//g'); do
+  echo -e -n "$i\talignment_length\t" ; pk_aln_len $i ;
+  echo -e -n "$i\tevo_rate\t" ; pk_evo_rate $i.treefile ;
+  echo -e -n "$i\trcv\t" ; pk_rcv $i ;
+  echo -e -n "$i\tlb_score\t" ; pk_lbs $i.treefile | grep "median" | awk '{print $NF}';
+  echo -e -n "$i\tsaturation\t" ; pk_saturation -a $i -t $i.treefile ;
+  echo -e -n "$i\ttreeness\t" ; pk_treeness $i.treefile ;
+done | tee gene_wise_information_content.txt
