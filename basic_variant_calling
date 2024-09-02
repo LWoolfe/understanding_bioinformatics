@@ -1,0 +1,46 @@
+###Using qualimap for quality control of the aligned .bam file
+qualimap bamqc -bam TrentoS7_bwasensitive_sorted_mdup.bam -outdir Results/ -nt 24 --java-mem-size=64G
+
+###Index the new file, check statistics and confirm its sorted: 
+samtools index TrentoS7_veryfast_chM.bam
+samtools idxstats TrentoS7_veryfast_chrM.bam
+samtools view -H TrentoS7_veryfast_chM.bam | grep '@HD'
+
+###Use bcf tools to create an mpileup 
+bcftools mpileup -Ou -f Ascaris_v2020.fa -o TrentoS7_veryfast_chM.pileup.bcf TrentoS7_veryfast_chM.bam
+
+###Use bcf tools to call varients 
+bcftools call -m -v -Ou -o TrentoS7_veryfast_chM.call.bcf TrentoS7_veryfast_chM.pileup.bcf
+
+###Check that it has worked 
+bcftools stats TrentoS7_veryfast_chM.call.bcf
+
+###Count the number of varients identified
+bcftools view TrentoS7_veryfast_chM.call.bcf | grep -v '^#' | wc -l
+
+### Use Norm (tidying Indels) 
+bcftools norm -Ou -f Ascaris_v2020.fa -o TrentoS7_veryfast_chM.norm.bcf TrentoS7_veryfast_chM.call.bcf
+
+### Applying a Hard filter- Quality must be greater or equal to 30, with a depth of equal or greater than 10. 
+bcftools filter -Ob -e 'QUAL<=30 || DP<10' -o TrentoS7_veryfast_chM.varients.bcf TrentoS7_veryfast_chM.norm.bcf
+
+###Reconfirm the number to determine how many were removed post-filter
+bcftools view TrentoS7_veryfast_chM.varients.bcf | grep -v '^#' | wc -l
+
+###Index the final bcf file
+bcftools index TrentoS7_veryfast_chM.varients.bcf
+
+###Convert .bcf to .vcg
+bcftools view -Ov -o PHU7_verysens.varients.vcf PHU7_verysens.varients.bcf
+
+###Count the number of variants per chromosome 
+awk '!/^#/ {count[$1]++} END {for (chrom in count) print chrom, count[chrom]}' PHU7_verysens.varients.vcf | sort -k1,1 > PHU7_verysens_chromosome_counts.txt
+
+###Calculating Ts/Tv ratio
+vcftools --vcf PHU7_bwa.varients.vcf --TsTv-summary
+
+###Count the number of SNPs
+bcftools view -v snps PHU7_verysens.varients.bcf | bcftools view -H | wc -l
+
+###Count the number of Indels
+bcftools view -v indel PHU7_verysens.varients.bcf | bcftools view -H | wc -l
